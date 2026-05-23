@@ -1,8 +1,9 @@
 import json
 
 from PyQt6.QtWidgets import QLineEdit
-from engine.bplustree import BPlusTree
+from PyQt6.QtWidgets import QAbstractItemView
 
+from engine.bplustree import BPlusTree
 from gui.record_dialog import RecordDialog
 
 from pathlib import Path
@@ -80,6 +81,12 @@ class MainWindow(QWidget):
         # =================================================
 
         self.table = QTableWidget()
+
+        # deshabilitar edición directa
+        self.table.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers
+        )
+        
         self.layout.addWidget(self.table)
 
         # =================================================
@@ -91,6 +98,9 @@ class MainWindow(QWidget):
         self.add_button = QPushButton("Agregar Registro")
         self.add_button.clicked.connect(self.add_record)
 
+        self.edit_button = QPushButton("Editar Registro")
+        self.edit_button.clicked.connect(self.edit_record) 
+
         self.delete_button = QPushButton("Eliminar Registro")
         self.delete_button.clicked.connect(self.delete_record)
 
@@ -98,6 +108,7 @@ class MainWindow(QWidget):
         self.save_button.clicked.connect(self.save_database)
 
         self.buttons_layout.addWidget(self.add_button)
+        self.buttons_layout.addWidget(self.edit_button)
         self.buttons_layout.addWidget(self.delete_button)
         self.buttons_layout.addWidget(self.save_button)
 
@@ -513,3 +524,154 @@ class MainWindow(QWidget):
                 pass
 
             self.index.insert(key, row)
+
+
+    # =====================================================
+    # EDITAR REGISTRO
+    # =====================================================
+
+    def edit_record(self):
+
+        current_row = self.table.currentRow()
+
+        if current_row < 0:
+
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Selecciona un registro."
+            )
+
+            return
+
+        # =============================================
+        # OBTENER COLUMNAS
+        # =============================================
+
+        columns = []
+
+        for column in range(self.table.columnCount()):
+
+            header = self.table.horizontalHeaderItem(column)
+
+            if header:
+                columns.append(header.text())
+
+        # =============================================
+        # OBTENER DATOS ACTUALES
+        # =============================================
+
+        current_data = {}
+
+        for column_index, column_name in enumerate(columns):
+
+            item = self.table.item(current_row, column_index)
+
+            value = ""
+
+            if item is not None:
+                value = item.text()
+
+            current_data[column_name] = value
+
+        # =============================================
+        # ABRIR DIÁLOGO
+        # =============================================
+
+        dialog = RecordDialog(columns, current_data)
+
+        if dialog.exec():
+
+            updated_record = dialog.get_data()
+
+            # =========================================
+            # ACTUALIZAR TABLA
+            # =========================================
+
+            for column_index, column_name in enumerate(columns):
+
+                value = str(updated_record[column_name])
+
+                item = QTableWidgetItem(value)
+
+                self.table.setItem(
+                    current_row,
+                    column_index,
+                    item
+                )
+
+            # =========================================
+            # REORDENAR TABLA
+            # =========================================
+
+            self.sort_table()
+
+            # =========================================
+            # RECONSTRUIR ÍNDICE
+            # =========================================
+
+            self.rebuild_index()
+
+            QMessageBox.information(
+                self,
+                "Actualizado",
+                "Registro actualizado correctamente."
+            )
+
+
+    # =====================================================
+    # ORDENAR TABLA
+    # =====================================================
+
+    def sort_table(self):
+
+        rows = []
+
+        row_count = self.table.rowCount()
+        column_count = self.table.columnCount()
+
+        # extraer datos
+        for row in range(row_count):
+
+            record = []
+
+            for column in range(column_count):
+
+                item = self.table.item(row, column)
+
+                value = ""
+
+                if item is not None:
+                    value = item.text()
+
+                record.append(value)
+
+            rows.append(record)
+
+        # ordenar por primera columna
+        def sort_key(record):
+
+            try:
+                return int(record[0])
+            except:
+                return record[0]
+
+        rows.sort(key=sort_key)
+
+        # limpiar tabla
+        self.table.setRowCount(0)
+
+        # reinsertar ordenado
+        for row_data in rows:
+
+            row_position = self.table.rowCount()
+
+            self.table.insertRow(row_position)
+
+            for column, value in enumerate(row_data):
+
+                self.table.setItem(
+                    row_position,
+                    column,
+                    QTableWidgetItem(str(value))
+                )
