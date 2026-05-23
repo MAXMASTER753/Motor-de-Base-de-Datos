@@ -270,16 +270,7 @@ class MainWindow(QWidget):
 
             key = record[primary_key]
 
-            # verificar duplicados
-            if self.index.search(key) is not None:
-
-                QMessageBox.warning(
-                    self,
-                    "Error",
-                    f"La clave '{key}' ya existe."
-                )
-
-                return
+           
 
             # =============================================
             # INSERTAR EN TABLA
