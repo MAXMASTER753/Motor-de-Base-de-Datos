@@ -31,55 +31,72 @@ class MainWindow(QWidget):
         super().__init__()
 
         self.setWindowTitle("Mini Database Engine")
-        self.resize(900, 600)
+        self.resize(1200, 700)
 
         self.current_database_path = None
 
         self.index = BPlusTree(order=4)
 
-        self.layout = QVBoxLayout()
-
         # =================================================
-        # TÍTULO
+        # LAYOUT PRINCIPAL
         # =================================================
 
-        self.title = QLabel("Bases de Datos JSON")
-        self.layout.addWidget(self.title)
+        self.main_layout = QHBoxLayout()
 
         # =================================================
-        # LISTA DE BASES
+        # SIDEBAR IZQUIERDO
         # =================================================
 
+        self.sidebar_layout = QVBoxLayout()
+
+        # título
+        self.sidebar_title = QLabel("Bases de Datos")
+        self.sidebar_layout.addWidget(self.sidebar_title)
+
+        # lista de bases
         self.database_list = QListWidget()
-        self.layout.addWidget(self.database_list)
+        self.sidebar_layout.addWidget(self.database_list)
 
-        # =================================================
-        # BOTÓN ABRIR
-        # =================================================
+        # botones bases
+        self.create_db_button = QPushButton("Crear Base")
+        self.create_db_button.clicked.connect(self.create_database)
 
-        self.open_button = QPushButton("Abrir Base de Datos")
+        self.delete_db_button = QPushButton("Eliminar Base")
+        self.delete_db_button.clicked.connect(self.delete_database)
+
+        self.open_button = QPushButton("Abrir Base")
         self.open_button.clicked.connect(self.open_database)
 
-        self.layout.addWidget(self.open_button)
-
+        self.sidebar_layout.addWidget(self.create_db_button)
+        self.sidebar_layout.addWidget(self.delete_db_button)
+        self.sidebar_layout.addWidget(self.open_button)
 
         # =================================================
+        # PANEL DERECHO
+        # =================================================
+
+        self.right_layout = QVBoxLayout()
+
+        # =============================================
         # BÚSQUEDA
-        # =================================================
+        # =============================================
+
+        self.search_layout = QHBoxLayout()
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Buscar por ID")
 
-        self.layout.addWidget(self.search_input)
-
-        self.search_button = QPushButton("Buscar Registro")
+        self.search_button = QPushButton("Buscar")
         self.search_button.clicked.connect(self.search_record)
 
-        self.layout.addWidget(self.search_button)
+        self.search_layout.addWidget(self.search_input)
+        self.search_layout.addWidget(self.search_button)
 
-        # =================================================
+        self.right_layout.addLayout(self.search_layout)
+
+        # =============================================
         # TABLA
-        # =================================================
+        # =============================================
 
         self.table = QTableWidget()
 
@@ -88,33 +105,19 @@ class MainWindow(QWidget):
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
 
-        self.layout.addWidget(self.table)
+        self.right_layout.addWidget(self.table)
 
         # =============================================
-        # BASES DE DATOS
+        # CRUD
         # =============================================
 
-        self.create_db_button = QPushButton("Crear Base de Datos")
-        self.create_db_button.clicked.connect(self.create_database)
-
-        self.delete_db_button = QPushButton("Eliminar Base de Datos")
-        self.delete_db_button.clicked.connect(self.delete_database)
-
-
-
-
-
-        # =================================================
-        # BOTONES CRUD
-        # =================================================
-
-        self.buttons_layout = QHBoxLayout()
+        self.crud_layout = QHBoxLayout()
 
         self.add_button = QPushButton("Agregar Registro")
         self.add_button.clicked.connect(self.add_record)
 
         self.edit_button = QPushButton("Editar Registro")
-        self.edit_button.clicked.connect(self.edit_record) 
+        self.edit_button.clicked.connect(self.edit_record)
 
         self.delete_button = QPushButton("Eliminar Registro")
         self.delete_button.clicked.connect(self.delete_record)
@@ -122,16 +125,25 @@ class MainWindow(QWidget):
         self.save_button = QPushButton("Guardar Cambios")
         self.save_button.clicked.connect(self.save_database)
 
-        self.buttons_layout.addWidget(self.create_db_button)
-        self.buttons_layout.addWidget(self.delete_db_button)
-        self.buttons_layout.addWidget(self.add_button)
-        self.buttons_layout.addWidget(self.edit_button)
-        self.buttons_layout.addWidget(self.delete_button)
-        self.buttons_layout.addWidget(self.save_button)
+        self.crud_layout.addWidget(self.add_button)
+        self.crud_layout.addWidget(self.edit_button)
+        self.crud_layout.addWidget(self.delete_button)
+        self.crud_layout.addWidget(self.save_button)
 
-        self.layout.addLayout(self.buttons_layout)
+        self.right_layout.addLayout(self.crud_layout)
 
-        self.setLayout(self.layout)
+        # =================================================
+        # UNIR PANELES
+        # =================================================
+
+        self.main_layout.addLayout(self.sidebar_layout, 1)
+        self.main_layout.addLayout(self.right_layout, 4)
+
+        self.setLayout(self.main_layout)
+
+        # =================================================
+        # CARGAR BASES
+        # =================================================
 
         self.load_databases()
 
