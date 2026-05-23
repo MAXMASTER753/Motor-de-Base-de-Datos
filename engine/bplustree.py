@@ -119,33 +119,40 @@ class BPlusTree:
 
     # 🔹 búsqueda de todos los duplicados
     def search_all(self, key):
+
         node = self.root
 
-        # 🔹 1. bajar hasta hoja
+        # =================================================
+        # BAJAR HASTA LA HOJA MÁS A LA IZQUIERDA POSIBLE
+        # =================================================
+
         while not node.leaf:
+
             i = 0
-            while i < len(node.keys) and key >= node.keys[i]:
+
+            # IMPORTANTE:
+            # usar > en vez de >=
+            while i < len(node.keys) and key > node.keys[i]:
                 i += 1
+
             node = node.children[i]
 
-        # 🔹 2. buscar primer match dentro de la hoja
+        # =================================================
+        # BUSCAR DUPLICADOS
+        # =================================================
+
         results = []
-        i = 0
 
-        while i < len(node.keys) and node.keys[i] < key:
-            i += 1
-
-        # 🔹 3. recolectar duplicados en hojas consecutivas
         while node:
-            while i < len(node.keys) and node.keys[i] == key:
-                results.append(node.children[i])
-                i += 1
 
-            # si ya no hay más en esta hoja → ir a la siguiente
-            if i < len(node.keys):
-                break
+            for i, k in enumerate(node.keys):
+
+                if k == key:
+                    results.append(node.children[i])
+
+                elif k > key:
+                    return results
 
             node = node.next
-            i = 0
 
         return results

@@ -432,9 +432,9 @@ class MainWindow(QWidget):
 
             return
 
-        row = self.index.search(key)
+        rows = self.index.search_all(key)
 
-        if row is None:
+        if not rows:
 
             QMessageBox.information(
                 self,
@@ -444,10 +444,13 @@ class MainWindow(QWidget):
 
             return
 
-        self.table.selectRow(row)
+        self.table.clearSelection()
+
+        for row in rows:
+            self.table.selectRow(row)
 
         QMessageBox.information(
             self,
             "Encontrado",
-            f"Registro encontrado en fila {row}"
+            f"{len(rows)} registro(s) encontrados."
         )
