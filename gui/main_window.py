@@ -3,6 +3,8 @@ import json
 from PyQt6.QtWidgets import QLineEdit
 from PyQt6.QtWidgets import QAbstractItemView
 from PyQt6.QtWidgets import QInputDialog
+from PyQt6.QtWidgets import QSplitter, QWidget
+from PyQt6.QtCore import Qt
 
 from engine.bplustree import BPlusTree
 from gui.record_dialog import RecordDialog
@@ -31,7 +33,8 @@ class MainWindow(QWidget):
         super().__init__()
 
         self.setWindowTitle("Mini Database Engine")
-        self.resize(1200, 700)
+        self.showMaximized()
+    #    self.setMinimumSize(900, 600)
 
         self.current_database_path = None
 
@@ -41,7 +44,9 @@ class MainWindow(QWidget):
         # LAYOUT PRINCIPAL
         # =================================================
 
-        self.main_layout = QHBoxLayout()
+        self.main_layout = QVBoxLayout()
+
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
 
         # =================================================
         # SIDEBAR IZQUIERDO
@@ -55,6 +60,9 @@ class MainWindow(QWidget):
 
         # lista de bases
         self.database_list = QListWidget()
+        self.database_list.itemDoubleClicked.connect(
+            self.open_database
+        )
         self.sidebar_layout.addWidget(self.database_list)
 
         # botones bases
@@ -84,6 +92,9 @@ class MainWindow(QWidget):
         self.search_layout = QHBoxLayout()
 
         self.search_input = QLineEdit()
+        self.search_input.returnPressed.connect(
+            self.search_record
+        )
         self.search_input.setPlaceholderText("Buscar por ID")
 
         self.search_button = QPushButton("Buscar")
@@ -136,8 +147,31 @@ class MainWindow(QWidget):
         # UNIR PANELES
         # =================================================
 
-        self.main_layout.addLayout(self.sidebar_layout, 1)
-        self.main_layout.addLayout(self.right_layout, 4)
+        # =================================================
+        # CONTENEDOR SIDEBAR
+        # =================================================
+
+        self.sidebar_widget = QWidget()
+        self.sidebar_widget.setLayout(self.sidebar_layout)
+
+        # =================================================
+        # CONTENEDOR DERECHO
+        # =================================================
+
+        self.right_widget = QWidget()
+        self.right_widget.setLayout(self.right_layout)
+
+        # =================================================
+        # SPLITTER
+        # =================================================
+
+        self.splitter.addWidget(self.sidebar_widget)
+        self.splitter.addWidget(self.right_widget)
+
+        # tamaños iniciales
+        self.splitter.setSizes([250, 950])
+
+        self.main_layout.addWidget(self.splitter)
 
         self.setLayout(self.main_layout)
 
@@ -166,7 +200,6 @@ class MainWindow(QWidget):
     # ABRIR BASE DE DATOS
     # =====================================================
 
-
     def open_database(self):
 
         selected = self.database_list.currentItem()
@@ -181,15 +214,43 @@ class MainWindow(QWidget):
 
             return
 
+        # =============================================
+        # PREGUNTAR SI GUARDAR
+        # =============================================
+
+        if self.current_database_path is not None:
+
+            reply = QMessageBox.question(
+                self,
+                "Cambiar Base de Datos",
+                (
+                    "¿Deseas guardar los cambios "
+                    "antes de cambiar de base de datos?"
+                ),
+                QMessageBox.StandardButton.Yes |
+                QMessageBox.StandardButton.No |
+                QMessageBox.StandardButton.Cancel
+            )
+
+            if reply == QMessageBox.StandardButton.Cancel:
+                return
+
+            if reply == QMessageBox.StandardButton.Yes:
+                self.save_database()
+
+        # =============================================
+        # ABRIR JSON
+        # =============================================
+
         db_name = selected.text()
 
-        db_path = DATABASES_DIR / db_name
+        path = DATABASES_DIR / db_name
 
-        self.current_database_path = db_path
+        self.current_database_path = path
 
         try:
 
-            with open(db_path, "r", encoding="utf-8") as file:
+            with open(path, "r", encoding="utf-8") as file:
                 data = json.load(file)
 
         except Exception as e:
@@ -197,60 +258,44 @@ class MainWindow(QWidget):
             QMessageBox.critical(
                 self,
                 "Error",
-                f"No se pudo abrir el archivo:\n{e}"
+                f"No se pudo abrir:\n{e}"
             )
 
             return
 
-        if not isinstance(data, list):
+        # =============================================
+        # LIMPIAR TABLA
+        # =============================================
 
-            QMessageBox.warning(
-                self,
-                "Error",
-                "El JSON debe contener una lista."
-            )
+        self.table.clear()
+        self.table.setRowCount(0)
 
+        # =============================================
+        # SIN DATOS
+        # =============================================
+
+        if not data:
+
+            self.table.setColumnCount(0)
+            self.rebuild_index()
             return
 
-        if len(data) == 0:
-
-            self.table.clear()
-
-            QMessageBox.information(
-                self,
-                "Vacío",
-                "La base de datos está vacía."
-            )
-
-            return
+        # =============================================
+        # COLUMNAS
+        # =============================================
 
         columns = list(data[0].keys())
 
         self.table.setColumnCount(len(columns))
         self.table.setHorizontalHeaderLabels(columns)
 
-        self.table.setRowCount(len(data))
-
-
-        # reconstruir índice
-        self.index = BPlusTree(order=4)
+        # =============================================
+        # FILAS
+        # =============================================
 
         for row_index, record in enumerate(data):
 
-            # usar primera columna como primary key
-            primary_key_column = columns[0]
-
-            if primary_key_column in record:
-
-                key = record[primary_key_column]
-
-                # convertir números automáticamente
-                try:
-                    key = int(key)
-                except:
-                    pass
-
-                self.index.insert(key, row_index)
+            self.table.insertRow(row_index)
 
             for column_index, column_name in enumerate(columns):
 
@@ -264,11 +309,11 @@ class MainWindow(QWidget):
                     item
                 )
 
-        QMessageBox.information(
-            self,
-            "Base de Datos Abierta",
-            f"{db_name} cargada correctamente."
-        )
+        # =============================================
+        # RECONSTRUIR ÍNDICE
+        # =============================================
+
+        self.rebuild_index()
 
     # =====================================================
     # AGREGAR REGISTRO
