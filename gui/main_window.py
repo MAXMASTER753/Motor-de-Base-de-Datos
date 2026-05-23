@@ -1,5 +1,8 @@
 import json
 
+from PyQt6.QtWidgets import QLineEdit
+from engine.bplustree import BPlusTree
+
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
@@ -28,6 +31,8 @@ class MainWindow(QWidget):
 
         self.current_database_path = None
 
+        self.index = BPlusTree(order=4)
+
         self.layout = QVBoxLayout()
 
         # =================================================
@@ -52,6 +57,21 @@ class MainWindow(QWidget):
         self.open_button.clicked.connect(self.open_database)
 
         self.layout.addWidget(self.open_button)
+
+
+        # =================================================
+        # BÚSQUEDA
+        # =================================================
+
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Buscar por ID")
+
+        self.layout.addWidget(self.search_input)
+
+        self.search_button = QPushButton("Buscar Registro")
+        self.search_button.clicked.connect(self.search_record)
+
+        self.layout.addWidget(self.search_button)
 
         # =================================================
         # TABLA
@@ -103,6 +123,7 @@ class MainWindow(QWidget):
     # =====================================================
     # ABRIR BASE DE DATOS
     # =====================================================
+
 
     def open_database(self):
 
@@ -168,7 +189,26 @@ class MainWindow(QWidget):
 
         self.table.setRowCount(len(data))
 
+
+        # reconstruir índice
+        self.index = BPlusTree(order=4)
+
         for row_index, record in enumerate(data):
+
+            # usar primera columna como primary key
+            primary_key_column = columns[0]
+
+            if primary_key_column in record:
+
+                key = record[primary_key_column]
+
+                # convertir números automáticamente
+                try:
+                    key = int(key)
+                except:
+                    pass
+
+                self.index.insert(key, row_index)
 
             for column_index, column_name in enumerate(columns):
 
@@ -293,4 +333,55 @@ class MainWindow(QWidget):
             self,
             "Guardado",
             "Base de datos guardada correctamente."
+        )
+
+    # =====================================================
+    # BUSCAR REGISTRO
+    # =====================================================
+
+    def search_record(self):
+
+        text = self.search_input.text().strip()
+
+        if text == "":
+
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Ingresa un ID."
+            )
+
+            return
+
+        try:
+            key = int(text)
+
+        except:
+
+            QMessageBox.warning(
+                self,
+                "Error",
+                "El ID debe ser numérico."
+            )
+
+            return
+
+        row = self.index.search(key)
+
+        if row is None:
+
+            QMessageBox.information(
+                self,
+                "No encontrado",
+                f"No existe id={key}"
+            )
+
+            return
+
+        self.table.selectRow(row)
+
+        QMessageBox.information(
+            self,
+            "Encontrado",
+            f"Registro encontrado en fila {row}"
         )

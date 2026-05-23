@@ -70,31 +70,52 @@ class BPlusTree:
 
     # 🔹 split
     def split_child(self, parent, index):
+
         node = parent.children[index]
+
         mid = len(node.keys) // 2
 
         new_node = Node(leaf=node.leaf)
 
-        # 🔥 subir clave media
-        parent.keys.insert(index, node.keys[mid])
-        parent.children.insert(index + 1, new_node)
-
-        # 🔹 dividir claves
-        new_node.keys = node.keys[mid + 1:]
-        node.keys = node.keys[:mid]
+        # =====================================================
+        # SPLIT EN HOJAS (B+ TREE REAL)
+        # =====================================================
 
         if node.leaf:
-            # 🔹 en hojas: los datos se reparten distinto
+
+            # dividir claves
+            new_node.keys = node.keys[mid:]
             new_node.children = node.children[mid:]
+
+            node.keys = node.keys[:mid]
             node.children = node.children[:mid]
 
-            # 🔥 mantener enlaces
+            # la primera clave del nuevo nodo sube al padre
+            promoted_key = new_node.keys[0]
+
+            parent.keys.insert(index, promoted_key)
+            parent.children.insert(index + 1, new_node)
+
+            # mantener linked list de hojas
             new_node.next = node.next
             node.next = new_node
+
+        # =====================================================
+        # SPLIT EN NODOS INTERNOS
+        # =====================================================
+
         else:
+
+            promoted_key = node.keys[mid]
+
+            new_node.keys = node.keys[mid + 1:]
             new_node.children = node.children[mid + 1:]
+
+            node.keys = node.keys[:mid]
             node.children = node.children[:mid + 1]
 
+            parent.keys.insert(index, promoted_key)
+            parent.children.insert(index + 1, new_node)
 
     # 🔹 búsqueda de todos los duplicados
     def search_all(self, key):
