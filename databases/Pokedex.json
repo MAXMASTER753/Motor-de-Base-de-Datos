@@ -1,18 +1,5 @@
 [
     {
-        "#": "2",
-        "Pokémon": "Ivysaur",
-        "PS": "60",
-        "Ataque": "62",
-        "Defensa": "63",
-        "Ataque esp.": "80",
-        "Defensa esp.": "80",
-        "Velocidad": "60",
-        "Promedio": "6750",
-        "σ": "890",
-        "Suma": "405"
-    },
-    {
         "#": "3",
         "Pokémon": "Venusaur",
         "PS": "80",
@@ -12959,5 +12946,31 @@
         "Promedio": "1",
         "σ": "1",
         "Suma": "1"
+    },
+    {
+        "#": "1",
+        "Pokémon": "Bulbasaur",
+        "PS": "1",
+        "Ataque": "2",
+        "Defensa": "3",
+        "Ataque esp.": "4",
+        "Defensa esp.": "5",
+        "Velocidad": "6",
+        "Promedio": "7",
+        "σ": "89",
+        "Suma": "9"
+    },
+    {
+        "#": "1",
+        "Pokémon": "Bulbasaur",
+        "PS": "1",
+        "Ataque": "2",
+        "Defensa": "3",
+        "Ataque esp.": "4",
+        "Defensa esp.": "5",
+        "Velocidad": "6",
+        "Promedio": "7",
+        "σ": "8",
+        "Suma": "9"
     }
 ]

@@ -276,9 +276,35 @@ class MainWindow(QWidget):
             # INSERTAR EN TABLA
             # =============================================
 
+            # =============================================
+            # ENCONTRAR POSICIÓN ORDENADA
+            # =============================================
+
             row = self.table.rowCount()
 
-            self.table.insertRow(row)
+            insert_position = row
+
+            for current_row in range(row):
+
+                item = self.table.item(current_row, 0)
+
+                if item is None:
+                    continue
+
+                current_key = item.text()
+
+                try:
+                    current_key = int(current_key)
+                except:
+                    pass
+
+                if key < current_key:
+
+                    insert_position = current_row
+                    break
+
+            # insertar fila ordenada
+            self.table.insertRow(insert_position)
 
             for column_index, column_name in enumerate(columns):
 
@@ -287,7 +313,7 @@ class MainWindow(QWidget):
                 item = QTableWidgetItem(value)
 
                 self.table.setItem(
-                    row,
+                    insert_position,
                     column_index,
                     item
                 )
@@ -296,7 +322,7 @@ class MainWindow(QWidget):
             # ACTUALIZAR ÍNDICE
             # =============================================
 
-            self.index.insert(key, row)
+            self.rebuild_index()
 
             QMessageBox.information(
                 self,
@@ -323,6 +349,7 @@ class MainWindow(QWidget):
             return
 
         self.table.removeRow(current_row)
+        self.rebuild_index()
 
     # =====================================================
     # GUARDAR BASE DE DATOS
@@ -454,3 +481,35 @@ class MainWindow(QWidget):
             "Encontrado",
             f"{len(rows)} registro(s) encontrados."
         )
+
+    # =====================================================
+    # RECONSTRUIR ÍNDICE
+    # =====================================================
+
+    def rebuild_index(self):
+
+        self.index = BPlusTree(order=4)
+
+        rows = self.table.rowCount()
+
+        if self.table.columnCount() == 0:
+            return
+
+        primary_key_column = 0
+
+        for row in range(rows):
+
+            item = self.table.item(row, primary_key_column)
+
+            if item is None:
+                continue
+
+            key = item.text()
+
+            # convertir números
+            try:
+                key = int(key)
+            except:
+                pass
+
+            self.index.insert(key, row)
