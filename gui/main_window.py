@@ -3,6 +3,8 @@ import json
 from PyQt6.QtWidgets import QLineEdit
 from engine.bplustree import BPlusTree
 
+from gui.record_dialog import RecordDialog
+
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
@@ -234,9 +236,82 @@ class MainWindow(QWidget):
 
     def add_record(self):
 
-        row = self.table.rowCount()
+        columns = []
 
-        self.table.insertRow(row)
+        for column in range(self.table.columnCount()):
+
+            header = self.table.horizontalHeaderItem(column)
+
+            if header:
+                columns.append(header.text())
+
+        # no hay columnas
+        if not columns:
+
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Primero abre una base de datos."
+            )
+
+            return
+
+        dialog = RecordDialog(columns)
+
+        if dialog.exec():
+
+            record = dialog.get_data()
+
+            # =============================================
+            # PRIMARY KEY
+            # =============================================
+
+            primary_key = columns[0]
+
+            key = record[primary_key]
+
+            # verificar duplicados
+            if self.index.search(key) is not None:
+
+                QMessageBox.warning(
+                    self,
+                    "Error",
+                    f"La clave '{key}' ya existe."
+                )
+
+                return
+
+            # =============================================
+            # INSERTAR EN TABLA
+            # =============================================
+
+            row = self.table.rowCount()
+
+            self.table.insertRow(row)
+
+            for column_index, column_name in enumerate(columns):
+
+                value = str(record.get(column_name, ""))
+
+                item = QTableWidgetItem(value)
+
+                self.table.setItem(
+                    row,
+                    column_index,
+                    item
+                )
+
+            # =============================================
+            # ACTUALIZAR ÍNDICE
+            # =============================================
+
+            self.index.insert(key, row)
+
+            QMessageBox.information(
+                self,
+                "Insertado",
+                f"Registro con clave '{key}' insertado correctamente."
+            )
 
     # =====================================================
     # ELIMINAR REGISTRO
