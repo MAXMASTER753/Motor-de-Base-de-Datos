@@ -10,7 +10,8 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QMessageBox,
     QTableWidget,
-    QTableWidgetItem
+    QTableWidgetItem,
+    QHBoxLayout
 )
 
 
@@ -23,7 +24,9 @@ class MainWindow(QWidget):
         super().__init__()
 
         self.setWindowTitle("Mini Database Engine")
-        self.resize(800, 600)
+        self.resize(900, 600)
+
+        self.current_database_path = None
 
         self.layout = QVBoxLayout()
 
@@ -57,6 +60,27 @@ class MainWindow(QWidget):
         self.table = QTableWidget()
         self.layout.addWidget(self.table)
 
+        # =================================================
+        # BOTONES CRUD
+        # =================================================
+
+        self.buttons_layout = QHBoxLayout()
+
+        self.add_button = QPushButton("Agregar Registro")
+        self.add_button.clicked.connect(self.add_record)
+
+        self.delete_button = QPushButton("Eliminar Registro")
+        self.delete_button.clicked.connect(self.delete_record)
+
+        self.save_button = QPushButton("Guardar Cambios")
+        self.save_button.clicked.connect(self.save_database)
+
+        self.buttons_layout.addWidget(self.add_button)
+        self.buttons_layout.addWidget(self.delete_button)
+        self.buttons_layout.addWidget(self.save_button)
+
+        self.layout.addLayout(self.buttons_layout)
+
         self.setLayout(self.layout)
 
         self.load_databases()
@@ -85,16 +109,20 @@ class MainWindow(QWidget):
         selected = self.database_list.currentItem()
 
         if selected is None:
+
             QMessageBox.warning(
                 self,
                 "Error",
                 "Selecciona una base de datos."
             )
+
             return
 
         db_name = selected.text()
 
         db_path = DATABASES_DIR / db_name
+
+        self.current_database_path = db_path
 
         try:
 
@@ -111,16 +139,12 @@ class MainWindow(QWidget):
 
             return
 
-        # =================================================
-        # VALIDAR JSON
-        # =================================================
-
         if not isinstance(data, list):
 
             QMessageBox.warning(
                 self,
                 "Error",
-                "El JSON debe contener una lista de registros."
+                "El JSON debe contener una lista."
             )
 
             return
@@ -137,20 +161,12 @@ class MainWindow(QWidget):
 
             return
 
-        # =================================================
-        # DETECTAR COLUMNAS
-        # =================================================
-
         columns = list(data[0].keys())
 
         self.table.setColumnCount(len(columns))
         self.table.setHorizontalHeaderLabels(columns)
 
         self.table.setRowCount(len(data))
-
-        # =================================================
-        # LLENAR TABLA
-        # =================================================
 
         for row_index, record in enumerate(data):
 
@@ -170,4 +186,111 @@ class MainWindow(QWidget):
             self,
             "Base de Datos Abierta",
             f"{db_name} cargada correctamente."
+        )
+
+    # =====================================================
+    # AGREGAR REGISTRO
+    # =====================================================
+
+    def add_record(self):
+
+        row = self.table.rowCount()
+
+        self.table.insertRow(row)
+
+    # =====================================================
+    # ELIMINAR REGISTRO
+    # =====================================================
+
+    def delete_record(self):
+
+        current_row = self.table.currentRow()
+
+        if current_row < 0:
+
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Selecciona una fila."
+            )
+
+            return
+
+        self.table.removeRow(current_row)
+
+    # =====================================================
+    # GUARDAR BASE DE DATOS
+    # =====================================================
+
+    def save_database(self):
+
+        if self.current_database_path is None:
+
+            QMessageBox.warning(
+                self,
+                "Error",
+                "No hay base de datos abierta."
+            )
+
+            return
+
+        rows = self.table.rowCount()
+        columns = self.table.columnCount()
+
+        headers = []
+
+        for column in range(columns):
+
+            header = self.table.horizontalHeaderItem(column).text()
+
+            headers.append(header)
+
+        data = []
+
+        for row in range(rows):
+
+            record = {}
+
+            for column in range(columns):
+
+                item = self.table.item(row, column)
+
+                value = ""
+
+                if item is not None:
+                    value = item.text()
+
+                record[headers[column]] = value
+
+            data.append(record)
+
+        try:
+
+            with open(
+                self.current_database_path,
+                "w",
+                encoding="utf-8"
+            ) as file:
+
+                json.dump(
+                    data,
+                    file,
+                    indent=4,
+                    ensure_ascii=False
+                )
+
+        except Exception as e:
+
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"No se pudo guardar:\n{e}"
+            )
+
+            return
+
+        QMessageBox.information(
+            self,
+            "Guardado",
+            "Base de datos guardada correctamente."
         )
