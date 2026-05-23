@@ -2,6 +2,7 @@ import json
 
 from PyQt6.QtWidgets import QLineEdit
 from PyQt6.QtWidgets import QAbstractItemView
+from PyQt6.QtWidgets import QInputDialog
 
 from engine.bplustree import BPlusTree
 from gui.record_dialog import RecordDialog
@@ -86,8 +87,22 @@ class MainWindow(QWidget):
         self.table.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
-        
+
         self.layout.addWidget(self.table)
+
+        # =============================================
+        # BASES DE DATOS
+        # =============================================
+
+        self.create_db_button = QPushButton("Crear Base de Datos")
+        self.create_db_button.clicked.connect(self.create_database)
+
+        self.delete_db_button = QPushButton("Eliminar Base de Datos")
+        self.delete_db_button.clicked.connect(self.delete_database)
+
+
+
+
 
         # =================================================
         # BOTONES CRUD
@@ -107,6 +122,8 @@ class MainWindow(QWidget):
         self.save_button = QPushButton("Guardar Cambios")
         self.save_button.clicked.connect(self.save_database)
 
+        self.buttons_layout.addWidget(self.create_db_button)
+        self.buttons_layout.addWidget(self.delete_db_button)
         self.buttons_layout.addWidget(self.add_button)
         self.buttons_layout.addWidget(self.edit_button)
         self.buttons_layout.addWidget(self.delete_button)
@@ -354,13 +371,54 @@ class MainWindow(QWidget):
             QMessageBox.warning(
                 self,
                 "Error",
-                "Selecciona una fila."
+                "Selecciona un registro."
             )
 
             return
 
+        # =============================================
+        # OBTENER ID
+        # =============================================
+
+        item = self.table.item(current_row, 0)
+
+        record_id = "?"
+
+        if item is not None:
+            record_id = item.text()
+
+        # =============================================
+        # CONFIRMACIÓN
+        # =============================================
+
+        reply = QMessageBox.question(
+            self,
+            "Confirmar eliminación",
+            (
+                f"¿Seguro que deseas eliminar el registro "
+                f"con ID '{record_id}'?\n\n"
+                f"Esta acción no se puede deshacer."
+            ),
+            QMessageBox.StandardButton.Yes |
+            QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # =============================================
+        # ELIMINAR
+        # =============================================
+
         self.table.removeRow(current_row)
+
         self.rebuild_index()
+
+        QMessageBox.information(
+            self,
+            "Eliminado",
+            f"Registro '{record_id}' eliminado correctamente."
+        )
 
     # =====================================================
     # GUARDAR BASE DE DATOS
@@ -675,3 +733,125 @@ class MainWindow(QWidget):
                     column,
                     QTableWidgetItem(str(value))
                 )
+
+
+    # =====================================================
+    # CREAR BASE DE DATOS
+    # =====================================================
+
+    def create_database(self):
+
+        name, ok = QInputDialog.getText(
+            self,
+            "Crear Base de Datos",
+            "Nombre de la base:"
+        )
+
+        if not ok or name.strip() == "":
+            return
+
+        name = name.strip()
+
+        # agregar extensión
+        if not name.endswith(".json"):
+            name += ".json"
+
+        path = DATABASES_DIR / name
+
+        # ya existe
+        if path.exists():
+
+            QMessageBox.warning(
+                self,
+                "Error",
+                "La base de datos ya existe."
+            )
+
+            return
+
+        try:
+
+            with open(path, "w", encoding="utf-8") as file:
+
+                json.dump([], file, indent=4)
+
+        except Exception as e:
+
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"No se pudo crear:\n{e}"
+            )
+
+            return
+
+        self.load_databases()
+
+        QMessageBox.information(
+            self,
+            "Creada",
+            f"Base de datos '{name}' creada correctamente."
+        )
+
+
+    # =====================================================
+    # ELIMINAR BASE DE DATOS
+    # =====================================================
+
+    def delete_database(self):
+
+        selected = self.database_list.currentItem()
+
+        if selected is None:
+
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Selecciona una base de datos."
+            )
+
+            return
+
+        db_name = selected.text()
+
+        reply = QMessageBox.question(
+            self,
+            "Eliminar Base de Datos",
+            (
+                f"¿Seguro que deseas eliminar "
+                f"la base de datos '{db_name}'?\n\n"
+                f"Todos los registros se perderán.\n"
+                f"Esta acción no se puede deshacer."
+            ),
+            QMessageBox.StandardButton.Yes |
+            QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        path = DATABASES_DIR / db_name
+
+        try:
+
+            path.unlink()
+
+        except Exception as e:
+
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"No se pudo eliminar:\n{e}"
+            )
+
+            return
+
+        self.load_databases()
+
+        self.table.clear()
+
+        QMessageBox.information(
+            self,
+            "Eliminada",
+            f"Base de datos '{db_name}' eliminada."
+        )
