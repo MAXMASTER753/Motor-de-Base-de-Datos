@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt
 
 from engine.bplustree import BPlusTree
 from gui.record_dialog import RecordDialog
+from gui.schema_dialog import SchemaDialog
 
 from pathlib import Path
 
@@ -248,10 +249,51 @@ class MainWindow(QWidget):
 
         self.current_database_path = path
 
+        
+
         try:
 
             with open(path, "r", encoding="utf-8") as file:
-                data = json.load(file)
+                database = json.load(file)
+
+            # =================================================
+            # COMPATIBILIDAD FORMATO NORMAL
+            # =================================================
+
+            if isinstance(database, list):
+
+                data = database
+
+                # generar schema automáticamente
+                columns = []
+
+                if data:
+
+                    first_record = data[0]
+
+                    for key in first_record.keys():
+
+                        columns.append({
+                            "name": key,
+                            "type": "str",
+                            "primary": len(columns) == 0
+                        })
+
+                schema = {
+                    "columns": columns
+                }
+
+            # =================================================
+            # FORMATO PROPIO
+            # =================================================
+
+            else:
+
+                schema = database.get("schema", {})
+                data = database.get("data", [])
+
+
+            self.current_schema = schema
 
         except Exception as e:
 
@@ -274,9 +316,37 @@ class MainWindow(QWidget):
         # SIN DATOS
         # =============================================
 
+        # =============================================
+        # ORDENAR COLUMNAS
+        # PRIMARY KEY SIEMPRE PRIMERA
+        # =============================================
+
+        schema_columns = schema.get("columns", [])
+
+        primary_column = None
+        other_columns = []
+
+        for column in schema_columns:
+
+            if column["primary"]:
+                primary_column = column["name"]
+            else:
+                other_columns.append(column["name"])
+
+        columns = []
+
+        if primary_column is not None:
+            columns.append(primary_column)
+
+        columns.extend(other_columns)
+
+        # configurar columnas aunque no existan datos
+        self.table.setColumnCount(len(columns))
+        self.table.setHorizontalHeaderLabels(columns)
+
+        # base vacía
         if not data:
 
-            self.table.setColumnCount(0)
             self.rebuild_index()
             return
 
@@ -355,7 +425,40 @@ class MainWindow(QWidget):
 
             key = record[primary_key]
 
-           
+            # =============================================
+            # AUTOINCREMENT
+            # =============================================
+
+            try:
+
+                key = int(key)
+
+            except:
+
+                # buscar último ID
+                max_id = 0
+
+                for current_row in range(self.table.rowCount()):
+
+                    item = self.table.item(current_row, 0)
+
+                    if item is None:
+                        continue
+
+                    try:
+
+                        current_id = int(item.text())
+
+                        if current_id > max_id:
+                            max_id = current_id
+
+                    except:
+                        continue
+
+                key = max_id + 1
+
+                # actualizar record
+                record[primary_key] = key
 
             # =============================================
             # INSERTAR EN TABLA
@@ -381,7 +484,7 @@ class MainWindow(QWidget):
                 try:
                     current_key = int(current_key)
                 except:
-                    pass
+                    continue
 
                 if key < current_key:
 
@@ -477,6 +580,7 @@ class MainWindow(QWidget):
             f"Registro '{record_id}' eliminado correctamente."
         )
 
+
     # =====================================================
     # GUARDAR BASE DE DATOS
     # =====================================================
@@ -493,35 +597,49 @@ class MainWindow(QWidget):
 
             return
 
-        rows = self.table.rowCount()
-        columns = self.table.columnCount()
-
-        headers = []
-
-        for column in range(columns):
-
-            header = self.table.horizontalHeaderItem(column).text()
-
-            headers.append(header)
-
         data = []
 
-        for row in range(rows):
+        # =============================================
+        # OBTENER COLUMNAS
+        # =============================================
+
+        columns = []
+
+        for column in range(self.table.columnCount()):
+
+            header = self.table.horizontalHeaderItem(column)
+
+            columns.append(header.text())
+
+        # =============================================
+        # OBTENER FILAS
+        # =============================================
+
+        for row in range(self.table.rowCount()):
 
             record = {}
 
-            for column in range(columns):
+            for column_index, column_name in enumerate(columns):
 
-                item = self.table.item(row, column)
+                item = self.table.item(row, column_index)
 
                 value = ""
 
                 if item is not None:
                     value = item.text()
 
-                record[headers[column]] = value
+                record[column_name] = value
 
             data.append(record)
+
+        # =============================================
+        # GUARDAR
+        # =============================================
+
+        database = {
+            "schema": self.current_schema,
+            "data": data
+        }
 
         try:
 
@@ -532,7 +650,7 @@ class MainWindow(QWidget):
             ) as file:
 
                 json.dump(
-                    data,
+                    database,
                     file,
                     indent=4,
                     ensure_ascii=False
@@ -630,13 +748,27 @@ class MainWindow(QWidget):
             if item is None:
                 continue
 
-            key = item.text()
+            # =============================================
+            # OBTENER PRIMARY KEY
+            # =============================================
 
-            # convertir números
+            key_text = item.text().strip()
+
+            # =============================================
+            # VALIDAR ENTERO
+            # =============================================
+
             try:
-                key = int(key)
+                key = int(key_text)
+
             except:
-                pass
+
+                # ignorar IDs inválidos
+                continue
+
+            # =============================================
+            # INSERTAR EN B+ TREE
+            # =============================================
 
             self.index.insert(key, row)
 
@@ -809,13 +941,15 @@ class MainWindow(QWidget):
 
         name = name.strip()
 
-        # agregar extensión
         if not name.endswith(".json"):
             name += ".json"
 
         path = DATABASES_DIR / name
 
-        # ya existe
+        # =============================================
+        # YA EXISTE
+        # =============================================
+
         if path.exists():
 
             QMessageBox.warning(
@@ -826,11 +960,36 @@ class MainWindow(QWidget):
 
             return
 
+        # =============================================
+        # DEFINIR SCHEMA
+        # =============================================
+
+        schema_dialog = SchemaDialog()
+
+        if not schema_dialog.exec():
+            return
+
+        schema = schema_dialog.get_schema()
+
+        # =============================================
+        # CREAR ESTRUCTURA
+        # =============================================
+
+        database = {
+            "schema": schema,
+            "data": []
+        }
+
         try:
 
             with open(path, "w", encoding="utf-8") as file:
 
-                json.dump([], file, indent=4)
+                json.dump(
+                    database,
+                    file,
+                    indent=4,
+                    ensure_ascii=False
+                )
 
         except Exception as e:
 

@@ -10,12 +10,13 @@ from PyQt6.QtWidgets import (
 
 class RecordDialog(QDialog):
 
-    def __init__(self, columns, data=None):
+    def __init__(self, columns, schema=None, data=None):
         super().__init__()
 
         self.setWindowTitle("Registro")
 
         self.columns = columns
+        self.schema = schema or {}
         self.inputs = {}
 
         self.layout = QVBoxLayout()
@@ -57,17 +58,110 @@ class RecordDialog(QDialog):
 
     def validate(self):
 
+        primary_found = False
+
         for column, input_field in self.inputs.items():
 
-            if input_field.text().strip() == "":
+            value = input_field.text().strip()
 
-                QMessageBox.warning(
-                    self,
-                    "Error",
-                    f"El campo '{column}' no puede estar vacío."
-                )
+            # buscar metadata de columna
+            column_schema = None
 
-                return
+            for col in self.schema.get("columns", []):
+
+                if col["name"] == column:
+                    column_schema = col
+                    break
+
+            if column_schema is None:
+                continue
+
+            column_type = column_schema["type"]
+            is_primary = column_schema["primary"]
+
+            # =========================================
+            # PRIMARY KEY AUTOINCREMENT
+            # =========================================
+
+            if is_primary:
+
+                primary_found = True
+
+                # vacío -> permitido (autoincrement)
+                if value == "":
+                    continue
+
+                # debe ser entero
+                try:
+                    int(value)
+
+                except:
+
+                    QMessageBox.warning(
+                        self,
+                        "Error",
+                        (
+                            f"La Primary Key '{column}' "
+                            f"debe ser numérica."
+                        )
+                    )
+
+                    return
+
+                # debe ser entero
+                try:
+                    int(value)
+                except:
+
+                    QMessageBox.warning(
+                        self,
+                        "Error",
+                        (
+                            f"La primary key '{column}' "
+                            f"debe ser numérica."
+                        )
+                    )
+
+                    return
+
+            # =========================================
+            # VALIDAR TIPOS
+            # =========================================
+
+            else:
+
+                if value == "":
+                    continue
+
+                try:
+
+                    # int
+                    if column_type == "int":
+
+                        int(value)
+
+                    # float
+                    elif column_type == "float":
+
+                        float(value)
+
+                    # str
+                    elif column_type == "str":
+
+                        str(value)
+
+                except:
+
+                    QMessageBox.warning(
+                        self,
+                        "Error",
+                        (
+                            f"'{column}' debe ser "
+                            f"de tipo {column_type}."
+                        )
+                    )
+
+                    return
 
         self.accept()
 
@@ -83,16 +177,40 @@ class RecordDialog(QDialog):
 
             value = input_field.text().strip()
 
-            # convertir automáticamente números
-            try:
+            # buscar tipo
+            column_schema = None
 
-                if "." in value:
-                    value = float(value)
-                else:
-                    value = int(value)
+            for col in self.schema.get("columns", []):
 
-            except:
-                pass
+                if col["name"] == column:
+                    column_schema = col
+                    break
+
+            if column_schema is None:
+
+                record[column] = value
+                continue
+
+            column_type = column_schema["type"]
+
+            # =========================================
+            # AUTO INCREMENT
+            # =========================================
+
+            if column_schema["primary"] and value == "":
+
+                record[column] = None
+                continue
+
+            # =========================================
+            # CASTING
+            # =========================================
+
+            if column_type == "int":
+                value = int(value)
+
+            elif column_type == "float":
+                value = float(value)
 
             record[column] = value
 
