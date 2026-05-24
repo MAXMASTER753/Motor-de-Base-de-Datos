@@ -120,6 +120,7 @@ class BPlusTree:
     # 🔹 búsqueda de todos los duplicados
     def search_all(self, key):
 
+
         node = self.root
 
         # =================================================
@@ -156,3 +157,55 @@ class BPlusTree:
             node = node.next
 
         return results
+    
+
+    # 🔹 eliminación simple
+    def delete(self, key, value=None):
+
+        node = self.root
+
+        # ============================================
+        # BAJAR HASTA HOJA
+        # ============================================
+
+        while not node.leaf:
+
+            i = 0
+
+            while i < len(node.keys) and key >= node.keys[i]:
+                i += 1
+
+            node = node.children[i]
+
+        # ============================================
+        # ELIMINAR EN HOJA
+        # ============================================
+
+        i = 0
+
+        while i < len(node.keys):
+
+            current_key = node.keys[i]
+
+            # clave encontrada
+            if current_key == key:
+
+                # sin value -> eliminar primero
+                if value is None:
+
+                    node.keys.pop(i)
+                    node.children.pop(i)
+
+                    return True
+
+                # con value -> eliminar exacto
+                if node.children[i] == value:
+
+                    node.keys.pop(i)
+                    node.children.pop(i)
+
+                    return True
+
+            i += 1
+
+        return False

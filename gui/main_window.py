@@ -567,12 +567,33 @@ class MainWindow(QWidget):
             return
 
         # =============================================
-        # ELIMINAR
+        # PRIMARY KEY
+        # =============================================
+
+        item = self.table.item(current_row, 0)
+
+        if item is not None:
+
+            try:
+                key = int(item.text())
+
+            except:
+                key = item.text()
+
+        else:
+            key = None
+
+        # =============================================
+        # ELIMINAR DEL ÍNDICE
+        # =============================================
+
+        self.index.delete(key, current_row)
+
+        # =============================================
+        # ELIMINAR FILA
         # =============================================
 
         self.table.removeRow(current_row)
-
-        self.rebuild_index()
 
         QMessageBox.information(
             self,
