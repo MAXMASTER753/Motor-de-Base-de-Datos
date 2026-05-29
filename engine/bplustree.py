@@ -70,61 +70,142 @@ class BPlusTree:
 
     # 🔹 split
     def split_child(self, parent, index):
+
         node = parent.children[index]
+
         mid = len(node.keys) // 2
 
         new_node = Node(leaf=node.leaf)
 
-        # 🔥 subir clave media
-        parent.keys.insert(index, node.keys[mid])
-        parent.children.insert(index + 1, new_node)
-
-        # 🔹 dividir claves
-        new_node.keys = node.keys[mid + 1:]
-        node.keys = node.keys[:mid]
+        # =====================================================
+        # SPLIT EN HOJAS (B+ TREE REAL)
+        # =====================================================
 
         if node.leaf:
-            # 🔹 en hojas: los datos se reparten distinto
+
+            # dividir claves
+            new_node.keys = node.keys[mid:]
             new_node.children = node.children[mid:]
+
+            node.keys = node.keys[:mid]
             node.children = node.children[:mid]
 
-            # 🔥 mantener enlaces
+            # la primera clave del nuevo nodo sube al padre
+            promoted_key = new_node.keys[0]
+
+            parent.keys.insert(index, promoted_key)
+            parent.children.insert(index + 1, new_node)
+
+            # mantener linked list de hojas
             new_node.next = node.next
             node.next = new_node
+
+        # =====================================================
+        # SPLIT EN NODOS INTERNOS
+        # =====================================================
+
         else:
+
+            promoted_key = node.keys[mid]
+
+            new_node.keys = node.keys[mid + 1:]
             new_node.children = node.children[mid + 1:]
+
+            node.keys = node.keys[:mid]
             node.children = node.children[:mid + 1]
 
+            parent.keys.insert(index, promoted_key)
+            parent.children.insert(index + 1, new_node)
 
     # 🔹 búsqueda de todos los duplicados
     def search_all(self, key):
+
+
         node = self.root
 
-        # 🔹 1. bajar hasta hoja
+        # =================================================
+        # BAJAR HASTA LA HOJA MÁS A LA IZQUIERDA POSIBLE
+        # =================================================
+
         while not node.leaf:
+
             i = 0
-            while i < len(node.keys) and key >= node.keys[i]:
+
+            # IMPORTANTE:
+            # usar > en vez de >=
+            while i < len(node.keys) and key > node.keys[i]:
                 i += 1
+
             node = node.children[i]
 
-        # 🔹 2. buscar primer match dentro de la hoja
+        # =================================================
+        # BUSCAR DUPLICADOS
+        # =================================================
+
         results = []
-        i = 0
 
-        while i < len(node.keys) and node.keys[i] < key:
-            i += 1
-
-        # 🔹 3. recolectar duplicados en hojas consecutivas
         while node:
-            while i < len(node.keys) and node.keys[i] == key:
-                results.append(node.children[i])
-                i += 1
 
-            # si ya no hay más en esta hoja → ir a la siguiente
-            if i < len(node.keys):
-                break
+            for i, k in enumerate(node.keys):
+
+                if k == key:
+                    results.append(node.children[i])
+
+                elif k > key:
+                    return results
 
             node = node.next
-            i = 0
 
         return results
+    
+
+    # 🔹 eliminación simple
+    def delete(self, key, value=None):
+
+        node = self.root
+
+        # ============================================
+        # BAJAR HASTA HOJA
+        # ============================================
+
+        while not node.leaf:
+
+            i = 0
+
+            while i < len(node.keys) and key >= node.keys[i]:
+                i += 1
+
+            node = node.children[i]
+
+        # ============================================
+        # ELIMINAR EN HOJA
+        # ============================================
+
+        i = 0
+
+        while i < len(node.keys):
+
+            current_key = node.keys[i]
+
+            # clave encontrada
+            if current_key == key:
+
+                # sin value -> eliminar primero
+                if value is None:
+
+                    node.keys.pop(i)
+                    node.children.pop(i)
+
+                    return True
+
+                # con value -> eliminar exacto
+                if node.children[i] == value:
+
+                    node.keys.pop(i)
+                    node.children.pop(i)
+
+                    return True
+
+            i += 1
+
+        return False

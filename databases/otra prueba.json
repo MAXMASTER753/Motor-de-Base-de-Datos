@@ -1,0 +1,33 @@
+{
+    "schema": {
+        "columns": [
+            {
+                "name": "hola",
+                "type": "int",
+                "primary": false
+            },
+            {
+                "name": "k",
+                "type": "int",
+                "primary": true
+            },
+            {
+                "name": "hace",
+                "type": "int",
+                "primary": false
+            }
+        ]
+    },
+    "data": [
+        {
+            "k": "1",
+            "hola": "b",
+            "hace": "c"
+        },
+        {
+            "k": "2",
+            "hola": "b",
+            "hace": "c"
+        }
+    ]
+}
