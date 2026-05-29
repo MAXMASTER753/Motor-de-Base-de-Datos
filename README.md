@@ -121,6 +121,81 @@ pip install PyQt6
 
 ---
 
+# IMPORTANTE — Long Paths de Windows
+
+Algunas librerías de Python pueden generar rutas muy largas durante la compilación del ejecutable.
+
+En algunos computadores Windows esto puede causar errores como:
+
+```text
+FileNotFoundError
+The system cannot find the path specified
+path too long
+```
+
+## Solución recomendada
+
+Habilitar soporte para rutas largas en Windows.
+
+### Opción 1 — Habilitar Long Paths en Windows
+
+1. Presionar:
+
+```text
+Win + R
+```
+
+2. Escribir:
+
+```text
+gpedit.msc
+```
+
+3. Ir a:
+
+```text
+Configuración del equipo
+→ Plantillas administrativas
+→ Sistema
+→ Sistema de archivos
+```
+
+4. Habilitar:
+
+```text
+Enable Win32 long paths
+```
+
+5. Reiniciar el computador.
+
+---
+
+## Opción 2 — Usar entorno virtual (recomendado)
+
+Crear un entorno virtual reduce considerablemente la longitud de las rutas.
+
+Desde la carpeta del proyecto ejecutar:
+
+```bash
+python -m venv venv
+```
+
+Activar entorno virtual:
+
+```bash
+venv\Scripts\activate
+```
+
+Luego instalar dependencias:
+
+```bash
+pip install PyQt6
+```
+
+Esto evita la mayoría de problemas relacionados con rutas largas.
+
+---
+
 # 7. Ejecutar el programa
 
 Desde la terminal:
@@ -343,6 +418,6 @@ Esto reduce enormemente la cantidad de comparaciones necesarias.
 
 # Autores
 
-MAX y Daid Huertas, en supervisión del ingeniero Enrique Simar
+MAX y David Huertas, en supervisión del ingeniero Enrique Simar
 
 Proyecto académico desarrollado para Ciencias de la Computación I.
