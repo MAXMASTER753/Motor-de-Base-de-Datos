@@ -307,27 +307,6 @@ Esto reduce enormemente la cantidad de comparaciones necesarias.
 
 ---
 
-# IMPORTANTE
-
-La carpeta:
-
-```text
-databases/
-```
-
-debe permanecer junto al ejecutable.
-
-Ejemplo:
-
-```text
-dist/
-│
-├── main.exe
-└── databases/
-```
-
----
-
 # Características principales
 
 - Interfaz gráfica completa
@@ -338,7 +317,6 @@ dist/
 - Esquemas dinámicos
 - Búsquedas eficientes
 - Persistencia de datos
-- Ejecutable independiente
 
 ---
 
@@ -365,5 +343,8 @@ dist/
 ---
 
 # Autores
+
+MAX y Daid Huertas
+En supervisión del ingeniero Enrique Simar
 
 Proyecto académico desarrollado para Ciencias de la Computación I.
