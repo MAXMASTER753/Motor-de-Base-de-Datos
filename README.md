@@ -344,7 +344,6 @@ Esto reduce enormemente la cantidad de comparaciones necesarias.
 
 # Autores
 
-MAX y Daid Huertas
-En supervisión del ingeniero Enrique Simar
+MAX y Daid Huertas, en supervisión del ingeniero Enrique Simar
 
 Proyecto académico desarrollado para Ciencias de la Computación I.
