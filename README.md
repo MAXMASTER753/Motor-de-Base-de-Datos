@@ -301,39 +301,9 @@ Esto reduce enormemente la cantidad de comparaciones necesarias.
 
 | Operación | Complejidad |
 |---|---|
-| Búsqueda | O(log n) |
-| Inserción | O(log n) |
-| Eliminación | O(log n) |
-
----
-
-# Crear ejecutable (.exe)
-
-## Instalar PyInstaller
-
-```bash
-pip install pyinstaller
-```
-
----
-
-# Generar ejecutable
-
-Desde la carpeta raíz del proyecto ejecutar:
-
-```bash
-python -m PyInstaller --onefile --windowed --collect-all PyQt6 main.py
-```
-
----
-
-# Resultado
-
-El ejecutable se generará en:
-
-```text
-dist/main.exe
-```
+| Búsqueda | O(n log n) |
+| Inserción | O(n log n) |
+| Eliminación | O(n log n) |
 
 ---
 
