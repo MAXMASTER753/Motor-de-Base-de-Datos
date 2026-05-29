@@ -24,7 +24,6 @@ El programa permite:
 - PyQt6
 - JSON
 - Árboles B+
-- PyInstaller
 
 ---
 
